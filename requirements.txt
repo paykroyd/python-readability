@@ -1,3 +1,4 @@
 chardet==2.2.1
 lxml==3.2.5
+requests==2.2.0
 wsgiref==0.1.2

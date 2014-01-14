@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import logging
 import re
 import sys
@@ -142,11 +143,10 @@ class Document:
          return clean_attributes(tounicode(self.html))
 
     def summary(self, html_partial=False):
-        """Generate the summary of the html docuemnt
+        """
+        Generate the summary of the html document.
 
-        :param html_partial: return only the div of the document, don't wrap
-        in html and body tags.
-
+        :param html_partial: return only div of the document - no html or body tag.
         """
         try:
             ruthless = True
@@ -614,22 +614,24 @@ def main():
     log.addHandler(handler)
     log.setLevel(logging.DEBUG)
 
-    file = None
+    content = None
     if options.url:
-        import urllib
-        file = urllib.urlopen(options.url)
+        import requests
+        resp = requests.get(options.url)
+        resp.raise_for_status()
+        content = resp.text
     else:
-        file = open(args[0], 'rt')
+        with open(args[0], 'rt') as f:
+            content = f.read()
     enc = sys.__stdout__.encoding or 'utf-8' # XXX: this hack could not always work, better to set PYTHONIOENCODING
-    try:
-        print Document(file.read(),
-            debug=options.verbose,
-            url=options.url,
-            positive_keywords = options.positive_keywords,
-            negative_keywords = options.negative_keywords,
-        ).summary().encode(enc, 'replace')
-    finally:
-        file.close()
+    print Document(content,
+        debug=options.verbose,
+        url=options.url,
+        positive_keywords = options.positive_keywords,
+        negative_keywords = options.negative_keywords,
+    ).summary().encode(enc, 'replace')
+
+
 
 if __name__ == '__main__':
     main()

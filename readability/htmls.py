@@ -5,7 +5,9 @@ import logging
 import lxml.html
 import re, sys
 
+
 utf8_parser = lxml.html.HTMLParser(encoding='utf-8')
+
 
 def build_doc(page):
     if isinstance(page, unicode):
@@ -16,6 +18,7 @@ def build_doc(page):
         page_unicode = page.decode(enc, 'replace')
     doc = lxml.html.document_fromstring(page_unicode.encode('utf-8', 'replace'), parser=utf8_parser)
     return doc, enc
+
 
 def js_re(src, pattern, flags, repl):
     return re.compile(pattern, flags).sub(src, repl.replace('$', '\\'))
