@@ -9,3 +9,5 @@ dist
 /man
 nosetests.xml
 .coverage
+tags
+/env

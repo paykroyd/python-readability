@@ -246,6 +246,9 @@ class Document:
         return output
 
     def select_best_candidate(self, candidates):
+        """
+        Returns the candidate with the highest content score.
+        """
         sorted_candidates = sorted(candidates.values(), key=lambda x: x['content_score'], reverse=True)
         for candidate in sorted_candidates[:5]:
             elem = candidate['elem']
@@ -268,11 +271,15 @@ class Document:
         total_length = text_length(elem)
         return float(link_length) / max(total_length, 1)
 
-    def score_paragraphs(self, ):
-        MIN_LEN = self.options.get(
-            'min_text_length',
-            self.TEXT_LENGTH_THRESHOLD)
-        candidates = {}
+    def score_paragraphs(self):
+        """
+        Scores each paragraph in the document except for those that are less than min length.
+
+        :returns: a dict of candidate element to a dict containing 'content_score' and 'elem' keys.
+        """
+        # minimum length to be considered as a valid paragraph (in number of characters)
+        MIN_LEN = self.options.get( 'min_text_length', self.TEXT_LENGTH_THRESHOLD)
+        candidates = {}  # dict mapping the candidate node to its score
         ordered = []
         for elem in self.tags(self._html(), "p", "pre", "td"):
             parent_node = elem.getparent()
@@ -293,8 +300,7 @@ class Document:
                 ordered.append(parent_node)
 
             if grand_parent_node is not None and grand_parent_node not in candidates:
-                candidates[grand_parent_node] = self.score_node(
-                    grand_parent_node)
+                candidates[grand_parent_node] = self.score_node(grand_parent_node)
                 ordered.append(grand_parent_node)
 
             content_score = 1
@@ -349,6 +355,11 @@ class Document:
         return weight
 
     def score_node(self, elem):
+        """
+        Scores the element based on the type of HTML tag and its class.
+
+        :returns: a dict containing 'content_score' and 'elem' keys.
+        """
         content_score = self.class_weight(elem)
         name = elem.tag.lower()
         if name == "div":
