@@ -609,6 +609,11 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    log.addHandler(handler)
+    log.setLevel(logging.DEBUG)
+
     file = None
     if options.url:
         import urllib
