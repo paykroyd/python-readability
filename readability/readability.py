@@ -93,7 +93,7 @@ class Document:
     TEXT_LENGTH_THRESHOLD = 25
     RETRY_LENGTH = 250
 
-    def __init__(self, input, positive_keywords=None, negative_keywords=None, **options):
+    def __init__(self, input, url, positive_keywords=None, negative_keywords=None, page=1, **options):
         """Generate the document
 
         :param input: string of the html content.
@@ -114,6 +114,8 @@ class Document:
         self.encoding = None
         self.positive_keywords = compile_pattern(positive_keywords)
         self.negative_keywords = compile_pattern(negative_keywords)
+        self.page = page
+        self.url = url
 
     def _html(self, force=False):
         """
@@ -129,11 +131,7 @@ class Document:
     def _parse(self, input):
         doc, self.encoding = build_doc(input)
         doc = html_cleaner.clean_html(doc)
-        base_href = self.options.get('url', None)
-        if base_href:
-            doc.make_links_absolute(base_href, resolve_base_href=True)
-        else:
-            doc.resolve_base_href()
+        doc.make_links_absolute(self.url, resolve_base_href=True)
         return doc
 
     def content(self):
@@ -159,11 +157,36 @@ class Document:
         else:
             return None
 
-    def summary(self, html_partial=False):
+    def get_next_page_url(self):
+        """
+        Searches the page for a next page URL if it can find one.
+        """
+        # if this is a media wiki page, skip it
+
+        LinkCandidateXPathQuery = "descendant-or-self::*[(not(@id) or (@id!='disqus_thread' and @id!='comments')) and (not(@class) or @class!='userComments')]/a"
+        candidates = self.html.xpath(LinkCandidateXPathQuery)
+
+        best = None
+        for candidate in candidates:
+            text = (candidate.text_content() or '').lower().strip()
+            if text == 'next':
+                best = candidate
+                break
+            elif text == str(self.page + 1):
+                best = candidate
+
+        if best != None:
+            return best.attrib.get('href')
+        else:
+            return None
+
+
+    def summary(self, html_partial=False, page=False):
         """
         Generate the summary of the html document.
 
         :param html_partial: return only div of the document - no html or body tag.
+        :param page: if True then this will try to page through additional pages if there are any and include them
         """
         try:
             ruthless = True
@@ -187,10 +210,10 @@ class Document:
                     best_candidate = self.select_best_candidate(candidates)
 
                 if best_candidate:
-                    article = self.get_article(candidates, best_candidate, html_partial=html_partial)
+                    article = self.get_article(candidates, best_candidate, html_partial=True)
                 else:
                     if ruthless:
-                        log.debug("ruthless removal did not work. ")
+                        log.info("ruthless removal did not work. ")
                         ruthless = False
                         self.debug(
                             ("ended up stripping too much - "
@@ -198,13 +221,29 @@ class Document:
                         # try again
                         continue
                     else:
-                        log.debug(
+                        log.info(
                             ("Ruthless and lenient parsing did not work. "
                              "Returning raw html"))
                         article = self.html.find('body')
                         if article is None:
                             article = self.html
                 cleaned_article = self.sanitize(article, candidates)
+
+                if page:
+                    url = self.get_next_page_url()
+                    if url:
+                        import requests
+                        try:
+                            log.info('fetching page %d at url: %s' % (self.page + 1, url))
+                            nextdoc = Document(requests.get(url).text, url=url, page=self.page + 1)
+                            rest = nextdoc.summary(True, True)
+                            if rest:
+                                self.html.append(nextdoc.html)
+                                cleaned_article = self.get_clean_html()
+                        except BaseException:
+                            log.exception('error trying to fetch the next page of article from: %s' % url)
+                            pass
+
                 article_length = len(cleaned_article or '')
                 retry_length = self.options.get(
                     'retry_length',
@@ -238,8 +277,7 @@ class Document:
             if sibling is best_elem:
                 append = True
             sibling_key = sibling  # HashableElement(sibling)
-            if sibling_key in candidates and \
-                candidates[sibling_key]['content_score'] >= sibling_score_threshold:
+            if sibling_key in candidates and candidates[sibling_key]['content_score'] >= sibling_score_threshold:
                 append = True
 
             if sibling.tag == "p":

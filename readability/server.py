@@ -11,7 +11,9 @@ def readerize():
     resp = requests.get(request.args.get('url'))
     resp.raise_for_status()
     enc = sys.__stdout__.encoding or 'utf-8'
-    html = Document(resp.text, debug=True, url=request.args.get('url')).summary().encode(enc, 'replace')
+
+    doc = Document(resp.text, debug=True, url=request.args.get('url'))
+    html = doc.summary(page=True).encode(enc, 'replace')
 
 
     return html
