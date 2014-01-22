@@ -116,6 +116,12 @@ class Document:
         self.negative_keywords = compile_pattern(negative_keywords)
 
     def _html(self, force=False):
+        """
+        It returns html after first cleaning/transforming it.
+
+        This involves removing elements that readability doesn't want to deal with (e.g., head, script, form, etc.)
+        It also makes all relative links absolute if there's a base HREF.
+        """
         if force or self.html is None:
             self.html = self._parse(self.input)
         return self.html
@@ -142,6 +148,16 @@ class Document:
     def get_clean_html(self):
          return clean_attributes(tounicode(self.html))
 
+    def get_article_element(self):
+        """
+        Returns an article element if there is a definitive one.
+        """
+        articles = [article for article in self.tags(self.html, 'article')]
+        if len(articles) == 1:
+            return articles[0]
+        else:
+            return None
+
     def summary(self, html_partial=False):
         """
         Generate the summary of the html document.
@@ -159,13 +175,18 @@ class Document:
                 if ruthless:
                     self.remove_unlikely_candidates()
                 self.transform_misused_divs_into_paragraphs()
+
+                # first try to get an article
+                article_node = self.get_article_element()
                 candidates = self.score_paragraphs()
 
-                best_candidate = self.select_best_candidate(candidates)
+                if article_node:
+                    best_candidate = self.score_node(article_node)
+                else:
+                    best_candidate = self.select_best_candidate(candidates)
 
                 if best_candidate:
-                    article = self.get_article(candidates, best_candidate,
-                            html_partial=html_partial)
+                    article = self.get_article(candidates, best_candidate, html_partial=html_partial)
                 else:
                     if ruthless:
                         log.debug("ruthless removal did not work. ")
@@ -202,9 +223,7 @@ class Document:
         # Now that we have the top candidate, look through its siblings for
         # content that might also be related.
         # Things like preambles, content split by ads that we removed, etc.
-        sibling_score_threshold = max([
-            10,
-            best_candidate['content_score'] * 0.2])
+        sibling_score_threshold = max([10, best_candidate['content_score'] * 0.2])
         # create a new html document with a html->body->div
         if html_partial:
             output = fragment_fromstring('<div/>')
