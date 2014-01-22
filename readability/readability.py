@@ -115,6 +115,7 @@ class Document:
         self.positive_keywords = compile_pattern(positive_keywords)
         self.negative_keywords = compile_pattern(negative_keywords)
         self.page = page
+        self.max_page = page
         self.url = url
 
     def _html(self, force=False):
@@ -237,8 +238,39 @@ class Document:
                             log.info('fetching page %d at url: %s' % (self.page + 1, url))
                             nextdoc = Document(requests.get(url).text, url=url, page=self.page + 1)
                             rest = nextdoc.summary(True, True)
+                            self.max_page = nextdoc.max_page
+
                             if rest:
                                 self.html.append(nextdoc.html)
+                                # if this is page 1, try to remove any repeating boilerplate
+                                # which is anything that we find exactly identical in every page
+                                if self.page == 1:
+                                    els = {}
+
+                                    for el in self.tags(self.html, 'div', 'header', 'section'):
+                                        els[el] = len(el.text_content())
+
+                                    to_remove = []
+                                    for el in els:
+                                        length = els[el]
+                                        identicals = [el]
+                                        for e, l in els.iteritems():
+                                            if e != el and l == length and e.text_content() == el.text_content():
+                                                identicals.append(e)
+                                        # if there was one of these identical items per page, then we should probably
+                                        # remove it
+                                        if len(identicals) == self.max_page:
+                                            to_remove.extend(identicals)
+
+                                    log.info('removing %d elements from the document' % len(to_remove))
+                                    for el in to_remove:
+                                        try:
+                                            el.drop_tree()
+                                        except:
+                                            # TODO: need to not try to remove things that are in a tree that has already been removed
+                                            log.exception('could not remove this')
+
+
                                 cleaned_article = self.get_clean_html()
                         except BaseException:
                             log.exception('error trying to fetch the next page of article from: %s' % url)
