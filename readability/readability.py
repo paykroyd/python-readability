@@ -150,9 +150,10 @@ class Document:
 
     def get_article_element(self):
         """
-        Returns an article element if there is a definitive one.
+        Returns an article candidate if there is a definitive article.
         """
-        articles = [article for article in self.tags(self.html, 'article')]
+        articles = [art for art in [self.score_node(article, True) for article in self.tags(self.html, 'article')]
+                    if art['content_score'] > 0]
         if len(articles) == 1:
             return articles[0]
         else:
@@ -181,7 +182,7 @@ class Document:
                 candidates = self.score_paragraphs()
 
                 if article_node:
-                    best_candidate = self.score_node(article_node)
+                    best_candidate = article_node
                 else:
                     best_candidate = self.select_best_candidate(candidates)
 
@@ -373,7 +374,7 @@ class Document:
 
         return weight
 
-    def score_node(self, elem):
+    def score_node(self, elem, score_text_length=False):
         """
         Scores the element based on the type of HTML tag and its class.
 
@@ -381,7 +382,9 @@ class Document:
         """
         content_score = self.class_weight(elem)
         name = elem.tag.lower()
-        if name == "div":
+        if name == "article":
+            content_score += 25
+        elif name == "div":
             content_score += 5
         elif name in ["pre", "td", "blockquote"]:
             content_score += 3
@@ -389,6 +392,19 @@ class Document:
             content_score -= 3
         elif name in ["h1", "h2", "h3", "h4", "h5", "h6", "th"]:
             content_score -= 5
+
+        if score_text_length:
+            inner_text = clean(elem.text_content() or "")
+            inner_text_len = len(inner_text)
+
+            # If this section is less than 200 characters
+            # don't even count it.
+            if inner_text_len < 200:
+                content_score = 0
+            else:
+                content_score += len(inner_text.split(','))
+                content_score += min((inner_text_len / 100), 3)
+
         return {
             'content_score': content_score,
             'elem': elem
