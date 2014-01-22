@@ -11,3 +11,4 @@ nosetests.xml
 .coverage
 tags
 /env
+/.idea
