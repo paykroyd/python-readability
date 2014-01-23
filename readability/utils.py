@@ -423,3 +423,44 @@ def sanitize(node, candidates, min_len=25):
     # TODO: there was some code here to remove specific attributes from nodes
 
     return node
+
+
+def remove_boilerplate(article, page_count):
+    """
+    Removes any content that shows up as many times as there are pages (e.g. boilerplate).
+
+    :param article: lxml element
+    :param page_count: number of pages
+    """
+    if page_count <= 1:
+        return
+
+    # get the text size of each element
+    els = {}
+    for el in tags(article, 'div', 'header', 'section'):
+        els[el] = len(el.text_content())
+
+    # now look at pairs that are exactly the same length, if they are the same text exactly and appear
+    # page_count number of times, then they should be removed
+    to_remove = []
+    for el in els:
+        if el in to_remove:
+            continue
+        length = els[el]
+        identicals = [el]
+        for e, l in els.iteritems():
+            if e != el and l == length and e.text_content() == el.text_content():
+                identicals.append(e)
+        # if there was one of these identical items per page, then we should probably
+        # remove it
+        if len(identicals) == page_count:
+            to_remove.extend(identicals)
+
+    logging.info('removing %d elements from the document' % len(to_remove))
+
+    for el in to_remove:
+        try:
+            el.drop_tree()
+        except StandardError:
+            # TODO: need to not try to remove things that are in a tree that has already been removed
+            logging.exception('could not remove this node')

@@ -89,7 +89,7 @@ class Document:
 
     @property
     def article(self):
-        if not self._article:
+        if self._article is None:
             self._article = self.parse()
         return self._article
 
@@ -168,7 +168,7 @@ class Document:
             article = do_parse(True)
         except Unparseable:
             pass
-        if not article:
+        if article is None:
             log.info('ruthless parsing didn\'t work')
             article = do_parse(False)
         return article
@@ -177,55 +177,26 @@ class Document:
         log.debug(*a)
 
 
-
-# def handle_paging():
-#     if page:
-#         url = self.get_next_page_url()
-#         if url:
-#             import requests
-#             try:
-#                 log.info('fetching page %d at url: %s' % (self.page + 1, url))
-#                 nextdoc = Document(requests.get(url).text, url=url, page=self.page + 1)
-#                 rest = nextdoc.summary(True, True)
-#                 self.max_page = nextdoc.max_page
-#
-#                 if rest:
-#                     self.html.append(nextdoc.html)
-#                     # if this is page 1, try to remove any repeating boilerplate
-#                     # which is anything that we find exactly identical in every page
-#                     if self.page == 1:
-#                         els = {}
-#
-#                         for el in utils.tags(self.html, 'div', 'header', 'section'):
-#                             els[el] = len(el.text_content())
-#
-#                         to_remove = []
-#                         for el in els:
-#                             length = els[el]
-#                             identicals = [el]
-#                             for e, l in els.iteritems():
-#                                 if e != el and l == length and e.text_content() == el.text_content():
-#                                     identicals.append(e)
-#                             # if there was one of these identical items per page, then we should probably
-#                             # remove it
-#                             if len(identicals) == self.max_page:
-#                                 to_remove.extend(identicals)
-#
-#                         log.info('removing %d elements from the document' % len(to_remove))
-#                         for el in to_remove:
-#                             try:
-#                                 el.drop_tree()
-#                             except:
-#                                 # TODO: need to not try to remove things that are in a tree that has already been removed
-#                                 log.exception('could not remove this')
-#
-#
-#                     cleaned_article = self.get_clean_html()
-#             except BaseException:
-#                 log.exception('error trying to fetch the next page of article from: %s' % url)
-#                 pass
-#
-#
+def get_article(url):
+    doc = Document(url)
+    pages = []
+    current = doc
+    # if we find an article see if we can find more pages
+    nexturl = current.get_next_page_url()
+    while nexturl:
+        log.info('fetching page %d at url: %s' % (current.page + 1, nexturl))
+        nextdoc = Document(nexturl, page=current.page + 1)
+        if nextdoc.article is not None:
+            pages.append(nextdoc.article)
+            nexturl = nextdoc.get_next_page_url()
+            current = nextdoc
+    log.info('found %d more pages' % len(pages))
+    # append any additional pages to the first one's content
+    for page in pages:
+        doc.article.append(page)
+    # now clean it up, removing any boilerplate that may be on each page of the article
+    utils.remove_boilerplate(doc.article, len(pages) + 1)
+    return doc.get_clean_article()
 
 
 def main():

@@ -1,6 +1,6 @@
 import sys
 from flask import Flask, request
-from readability import Document
+from readability import get_article
 import requests
 
 app = Flask('readability')
@@ -8,9 +8,7 @@ app = Flask('readability')
 
 @app.route('/')
 def readerize():
-    enc = sys.__stdout__.encoding or 'utf-8'
-    doc = Document(url=request.args.get('url'))
-    html = doc.get_clean_article().encode(enc, 'replace')
+    html = get_article(request.args.get('url'))
     return html
 
 if __name__ == '__main__':
