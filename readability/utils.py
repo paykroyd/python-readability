@@ -466,19 +466,69 @@ def remove_boilerplate(article, page_count):
             logging.exception('could not remove this node')
 
 
-def is_possible_paging_url(baseurl, candidateurl):
+def score_possible_paging_url(baseurl, candidate, nextpage):
     """
     Returns true if the candidate url could plausibly be a next page url.
 
     For example, if it's not for the same domain then it's probably not a valid paging url.
 
     :param baseurl: current page's url
-    :param candidateurl: the url being evaluated for next-pagey-ness
+    :param candidate: anchor element being evaluated
+    :param nextpage: number of the next page
     :returns: boolean
     """
+    def splitpath(path):
+        if not path:
+            return ['']
+        else:
+            return path.split('/')
+
+    candidateurl = candidate.attrib.get('href')
+    candidatetext = (candidate.text_content() or '').lower().strip()
     if candidateurl is None:
         return False
     base = urlparse(baseurl)
     candidate = urlparse(candidateurl)
-    # for now insist that protocol and domain are the same
-    return base[0] == candidate[0] and base[1] == candidate[1]
+
+    # if it's not the same domain 0 points
+    if not(base[0] == candidate[0] and base[1] == candidate[1]):
+        return 0
+    if '#' in candidateurl:
+        return 0
+
+    basepath = splitpath(base[2])
+    candidatepath = splitpath(candidate[2])
+    # if the path is the same and hte query params are the same, 0 points
+    if basepath == candidatepath and base[4] == candidate[4]:
+        return 0
+    if len(candidatepath) < len(basepath):
+        return 0
+    # count mismatched path elements, which should only happen at the end
+    mismatch = 0
+    matched_page = False
+    for i in range(len(candidatepath)):
+        celement = candidatepath[i]
+        belement = basepath[i] if i < len(basepath) else ''
+
+        if celement != belement:
+            # differences should only come at the end of the path
+            if i < len(basepath) - 2:
+                return 0
+            if str(nextpage) == celement:
+                matched_page = True
+            else:
+                mismatch += 1
+
+        if mismatch > 1:
+            return 0
+
+    if not matched_page:
+        return 0
+
+    score = 1
+    if candidatetext == 'next':
+        score += 1
+    elif candidatetext == str(nextpage):
+        score += 2
+
+    return score

@@ -79,13 +79,13 @@ class Document:
         candidates = self.html.xpath(LinkCandidateXPathQuery)
 
         best = None
+        best_score = 0
+        next_page = self.page + 1
         for candidate in candidates:
-            text = (candidate.text_content() or '').lower().strip()
-            if text == 'next' and utils.is_possible_paging_url(self.url, candidate.attrib.get('href')):
+            score = utils.score_possible_paging_url(self.url, candidate, next_page)
+            if score > best_score:
                 best = candidate
-                break
-            elif text == str(self.page + 1) and utils.is_possible_paging_url(self.url, candidate.attrib.get('href')):
-                best = candidate
+                best_score = score
 
         if best != None:
             return best.attrib.get('href')
@@ -161,13 +161,15 @@ def get_article(url):
     """
     doc = Document(url)
     pages = []
+    used_urls = set(url)
     current = doc
     # if we find an article see if we can find more pages
     nexturl = current.get_next_page_url()
-    while nexturl:
+    while nexturl and nexturl not in used_urls:
         log.info('fetching page %d at url: %s' % (current.page + 1, nexturl))
         nextdoc = Document(nexturl, page=current.page + 1)
         if nextdoc.article is not None:
+            used_urls.add(nexturl)
             pages.append(nextdoc.article)
             nexturl = nextdoc.get_next_page_url()
             current = nextdoc
