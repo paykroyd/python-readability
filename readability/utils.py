@@ -22,7 +22,6 @@ REGEXES = {
 }
 
 
-
 def tags(node, *tag_names):
     """
     Iterates through all descendants of node with any of the tag names.
@@ -33,7 +32,7 @@ def tags(node, *tag_names):
     for tag_name in tag_names:
         for e in node.findall('.//%s' % tag_name):
             yield e
-            
+
 
 def reverse_tags(node, *tag_names):
     """
@@ -45,7 +44,7 @@ def reverse_tags(node, *tag_names):
     for tag_name in tag_names:
         for e in reversed(node.findall('.//%s' % tag_name)):
             yield e
-            
+
 
 def clean(text):
     text = re.sub('\s*\n\s*', '\n', text)
@@ -205,6 +204,7 @@ def remove_unlikely_candidates(html):
             elem.drop_tree()
     return html
 
+
 def transform_misused_divs_into_paragraphs(html):
     """
     Transform <div>s that do not contain other block elements into <p>'s.
@@ -315,8 +315,7 @@ def sanitize(node, candidates, min_len=25):
         tag = el.tag
 
         if weight + content_score < 0:
-            logging.debug("Cleaned %s with score %6.3f and weight %-3s" %
-                (describe(el), content_score, weight, ))
+            logging.debug("Cleaned %s with score %6.3f and weight %-3s" % (describe(el), content_score, weight, ))
             el.drop_tree()
         elif el.text_content().count(",") < 10:
             counts = {}
@@ -353,7 +352,7 @@ def sanitize(node, candidates, min_len=25):
             elif counts["input"] > (counts["p"] / 3):
                 reason = "less than 3x <p>s than <input>s"
                 to_remove = True
-            elif content_length < (min_len) and (counts["img"] == 0 or counts["img"] > 2):
+            elif content_length < min_len and (counts["img"] == 0 or counts["img"] > 2):
                 reason = "too short content length %s without a single image" % content_length
                 to_remove = True
             elif weight < 25 and link_density > 0.2:
@@ -414,8 +413,7 @@ def sanitize(node, candidates, min_len=25):
                         allowed[desnode] = True
 
             if to_remove:
-                logging.debug("Cleaned %6.3f %s with weight %s cause it has %s." %
-                    (content_score, describe(el), weight, reason))
+                logging.debug("Cleaned %6.3f %s with weight %s cause it has %s." % (content_score, describe(el), weight, reason))
                 #print tounicode(el)
                 #logging.debug("pname %s pweight %.3f" %(pname, pweight))
                 el.drop_tree()
