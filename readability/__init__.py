@@ -1,1 +1,1 @@
-#from .readability import Document
+from .readability import Document
