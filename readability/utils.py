@@ -245,6 +245,23 @@ def transform_misused_divs_into_paragraphs(html):
     return html
 
 
+def transform_dynamic_images(html):
+    """
+    Some sites use dynamic image loading normalize that.
+
+    The pattern is an <img src='xyz' data-lazy-src'real-image.jpg'/><noscript><img src='real-image.jpg'/></noscript>
+    """
+    to_remove = []
+    for img in html.xpath('.//noscript/img'):
+        ov = img.xpath('../../img[@data-lazy-src=\'' + img.attrib.get('src') + '\']')
+        if ov and len(ov) == 1:
+            to_remove.append(img.getparent())
+    for img in to_remove:
+        img.drop_tree()
+    for img in html.xpath('.//img[@data-lazy-src]'):
+        img.attrib['src'] = img.attrib['data-lazy-src']
+
+
 def text_length(i):
     return len(clean(i.text_content() or ""))
 
@@ -301,7 +318,9 @@ def sanitize(node, candidates, min_len=25):
         if class_weight(header) < 0 or get_link_density(header) > 0.33:
             header.drop_tree()
 
-    for elem in tags(node, "form", "iframe", "textarea"):
+    transform_dynamic_images(node)
+
+    for elem in tags(node, "form", "iframe", "textarea" ):
         elem.drop_tree()
     allowed = {}
     # Conditionally clean <table>s, <ul>s, and <div>s
