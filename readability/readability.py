@@ -23,6 +23,10 @@ class Unparseable(ValueError):
     pass
 
 
+class NotArticle(ValueError):
+    pass
+
+
 class Document:
     """
     Represents a single page of content.
@@ -30,15 +34,19 @@ class Document:
     TEXT_LENGTH_THRESHOLD = 25
     RETRY_LENGTH = 250
 
-    def __init__(self, url, text=None, page=1):
+    def __init__(self, url, text=None, page=1, min_article_length=250, min_article_percentage=0.075):
         """
         :param url: the url of the document
         :param text: optionally the string value of the page may be passed in
         :param page: if this is one in a series of documents in an article this should be set
+        :param min_article_length: if an article is less than this number of characters it's not an article
+        :param min_article_percentage: an article must be this % of the text on the page
         """
         self.url = url
         self.page = page
         self._article = None
+        self.min_article_length = min_article_length
+        self.min_article_percentage = min_article_percentage
 
         if text:
             self.text = text
@@ -64,6 +72,22 @@ class Document:
         return clean_attributes(tounicode(self.article))
 
     @property
+    def is_article(self):
+        """
+        Returns True if this is an article.
+
+        Start off by determining this via the length of the article.
+        """
+        if not self.article:
+            return False
+        article_len = utils.text_length(self.article)
+        if article_len < self.min_article_length:
+            return False
+        percent = float(article_len) / utils.text_length(self.html)
+        logging.info('Article is %f %% of the documemnt' % percent)
+        return percent >= self.min_article_percentage
+
+    @property
     def article(self):
         if self._article is None:
             self._article = self.parse()
@@ -87,7 +111,7 @@ class Document:
                 best = candidate
                 best_score = score
 
-        if best != None:
+        if best is not None:
             return best.attrib.get('href')
         else:
             return None
@@ -160,6 +184,9 @@ def get_article(url):
     :param url: url to find an article on
     """
     doc = Document(url)
+    if not doc.is_article:
+        raise NotArticle()
+
     pages = []
     used_urls = set(url)
     current = doc
