@@ -1,0 +1,45 @@
+body {
+    margin: 25px;
+    margin-left: 100px;
+    margin-right: 100px;
+}
+div {
+    font-family: Georgia, Palatino, Times, 'Times New Roman', serif;
+    font-size: 18px;
+    line-height: 28px;
+    max-width: 600px;
+}
+
+blockquote {
+    font-weight: lighter;
+    color: gray;
+}
+
+h1 {
+    font-size: 1.25em;
+}
+
+h2 {
+    font-size: 1.125em;
+}
+
+h3 {
+    font-size: 1.05em;
+}
+
+h4, h5, h6 {
+    font-size: 1em;
+    margin: 1em 0;
+}
+
+figure {
+    margin: 0;
+}
+
+div {
+    text-rendering: optimizeLegibility;
+}
+
+pre {
+    white-space: pre-wrap;
+}

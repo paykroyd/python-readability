@@ -10,7 +10,8 @@ def readerize():
         raise ValueError()
 
     try:
-        return get_article(request.args.get('url'))
+        return '<html><head><link rel="stylesheet" type="text/css" href="/static/style.css"></head><body>' + \
+               get_article(request.args.get('url')) + "</body></html>"
     except NotArticle:
         return 'not article'
 
