@@ -81,10 +81,10 @@ class Document:
         best = None
         for candidate in candidates:
             text = (candidate.text_content() or '').lower().strip()
-            if text == 'next':
+            if text == 'next' and utils.is_possible_paging_url(self.url, candidate.attrib.get('href')):
                 best = candidate
                 break
-            elif text == str(self.page + 1):
+            elif text == str(self.page + 1) and utils.is_possible_paging_url(self.url, candidate.attrib.get('href')):
                 best = candidate
 
         if best != None:
@@ -154,6 +154,11 @@ class Document:
 
 
 def get_article(url):
+    """
+    Given a URL this loads the page and parses the article, attempting to page it as well.
+
+    :param url: url to find an article on
+    """
     doc = Document(url)
     pages = []
     current = doc

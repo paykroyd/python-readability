@@ -1,5 +1,7 @@
 import logging
 
+from urlparse import urlparse
+
 from lxml.etree import tostring
 
 import re
@@ -462,3 +464,21 @@ def remove_boilerplate(article, page_count):
         except StandardError:
             # TODO: need to not try to remove things that are in a tree that has already been removed
             logging.exception('could not remove this node')
+
+
+def is_possible_paging_url(baseurl, candidateurl):
+    """
+    Returns true if the candidate url could plausibly be a next page url.
+
+    For example, if it's not for the same domain then it's probably not a valid paging url.
+
+    :param baseurl: current page's url
+    :param candidateurl: the url being evaluated for next-pagey-ness
+    :returns: boolean
+    """
+    if candidateurl is None:
+        return False
+    base = urlparse(baseurl)
+    candidate = urlparse(candidateurl)
+    # for now insist that protocol and domain are the same
+    return base[0] == candidate[0] and base[1] == candidate[1]
