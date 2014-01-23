@@ -6,7 +6,6 @@ from copy import deepcopy
 
 from lxml.etree import tounicode
 
-import re
 import requests
 import utils
 from cleaners import clean_attributes
@@ -22,29 +21,6 @@ log = logging.getLogger()
 
 class Unparseable(ValueError):
     pass
-
-
-def to_int(x):
-    if not x:
-        return None
-    x = x.strip()
-    if x.endswith('px'):
-        return int(x[:-2])
-    if x.endswith('em'):
-        return int(x[:-2]) * 12
-    return int(x)
-
-regexp_type = type(re.compile('hello, world'))
-
-
-def compile_pattern(elements):
-    if not elements:
-        return None
-    if isinstance(elements, regexp_type):
-        return elements
-    if isinstance(elements, basestring):
-        elements = elements.split(',')
-    return re.compile(u'|'.join([re.escape(x.lower()) for x in elements]), re.U)
 
 
 class Document:
