@@ -8,16 +8,11 @@ app = Flask('readability')
 
 @app.route('/')
 def readerize():
-    resp = requests.get(request.args.get('url'))
-    resp.raise_for_status()
     enc = sys.__stdout__.encoding or 'utf-8'
-
-    doc = Document(resp.text, debug=True, url=request.args.get('url'))
-    html = doc.summary(page=True).encode(enc, 'replace')
-
-
+    doc = Document(url=request.args.get('url'))
+    html = doc.get_clean_article().encode(enc, 'replace')
     return html
 
 if __name__ == '__main__':
-    app.run(port=8040)
+    app.run(port=8040, debug=True)
 

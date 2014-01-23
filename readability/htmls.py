@@ -105,13 +105,3 @@ def shorten_title(doc):
 
     return title
 
-def get_body(doc):
-    [ elem.drop_tree() for elem in doc.xpath('.//script | .//link | .//style') ]
-    raw_html = unicode(tostring(doc.body or doc))
-    cleaned = clean_attributes(raw_html)
-    try:
-        #BeautifulSoup(cleaned) #FIXME do we really need to try loading it?
-        return cleaned
-    except Exception: #FIXME find the equivalent lxml error
-        #logging.error("cleansing broke html content: %s\n---------\n%s" % (raw_html, cleaned))
-        return raw_html
