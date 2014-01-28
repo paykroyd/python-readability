@@ -177,13 +177,13 @@ class Document:
         log.debug(*a)
 
 
-def get_article(url):
+def get_article(url, text=None):
     """
     Given a URL this loads the page and parses the article, attempting to page it as well.
 
     :param url: url to find an article on
     """
-    doc = Document(url)
+    doc = Document(url, text)
     if not doc.is_article:
         raise NotArticle()
 
